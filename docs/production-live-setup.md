@@ -1,4 +1,4 @@
-# Production Live Setup (Vercel + GitHub Actions + Railway)
+# Production Live Setup (Vercel Cron + GitHub Actions + Railway)
 
 This guide is the canonical production checklist for this repository.
 
@@ -43,11 +43,27 @@ Recommended for full agent stack:
 Compatibility fallback still supported:
 - `SOCIAL_AGENT_CRON_SECRET`
 
-## 2) GitHub Actions secrets
+## 2) Vercel Cron schedule
+
+The production automation schedule lives in [vercel.json](../vercel.json). Vercel Cron sends `Authorization: Bearer <CRON_SECRET>` automatically when `CRON_SECRET` is configured in the project environment.
+
+Active production jobs:
+- `07:15` and `14:15` UTC: trend refresh
+- `08:05` UTC: daily content trigger
+- `08:50` UTC: social token health check
+- `09:20` UTC: social queue publishing
+- `10:30` UTC: daily ops digest
+- Tuesdays `13:00` UTC: newsletter weekly send
+- Thursdays `13:20` UTC: competitor intelligence scan
+- First of month `14:10` UTC: monthly ops report
+
+Keep the matching GitHub Actions workflows manual-only unless Vercel Cron is intentionally disabled. Running both schedulers will duplicate posts, reports, and Slack alerts.
+
+## 3) GitHub Actions secrets
 
 Set these in GitHub Repository Settings -> Secrets and variables -> Actions.
 
-Required by workflows in [.github/workflows/daily-blog.yml](../.github/workflows/daily-blog.yml), [.github/workflows/social-publish.yml](../.github/workflows/social-publish.yml), [.github/workflows/trend-refresh.yml](../.github/workflows/trend-refresh.yml), [.github/workflows/newsletter-weekly.yml](../.github/workflows/newsletter-weekly.yml), and [.github/workflows/competitor-scan.yml](../.github/workflows/competitor-scan.yml):
+Required by manual fallback workflows in [.github/workflows/daily-blog.yml](../.github/workflows/daily-blog.yml), [.github/workflows/social-publish.yml](../.github/workflows/social-publish.yml), [.github/workflows/trend-refresh.yml](../.github/workflows/trend-refresh.yml), [.github/workflows/newsletter-weekly.yml](../.github/workflows/newsletter-weekly.yml), and [.github/workflows/competitor-scan.yml](../.github/workflows/competitor-scan.yml):
 - `OPENAI_API_KEY`
 - `CRON_SECRET`
 - `NEXT_PUBLIC_BASE_URL`
@@ -57,9 +73,10 @@ Optional:
 
 Notes:
 - `GITHUB_TOKEN` is provided automatically by GitHub Actions.
-- Workflows now use one base URL secret name: `NEXT_PUBLIC_BASE_URL`.
+- The production smoke monitor is still scheduled in GitHub Actions because it checks the deployed site from outside Vercel.
+- The other GitHub workflows are manual fallbacks; Vercel Cron is the production scheduler.
 
-## 3) Railway scheduler config
+## 4) Railway scheduler config
 
 Use Railway Cron to call the orchestrator endpoint.
 
@@ -79,7 +96,7 @@ Trigger details:
 
 Reference: [docs/railway-orchestrator-setup.md](./railway-orchestrator-setup.md)
 
-## 4) Preflight checks before go-live
+## 5) Preflight checks before go-live
 
 Run locally with your env loaded:
 
@@ -106,18 +123,19 @@ Strict mode fails if recommended vars are missing:
 node scripts/validate-prod-env.mjs --target=all --strict
 ```
 
-## 5) Production smoke tests
+## 6) Production smoke tests
 
 After deployment, verify:
 - `GET /api/health` returns 200
 - Admin login works
 - `POST /api/agents/orchestrator/trigger?dryRun=1` with Railway secret returns execution plan
+- `GET /api/agents/content/trigger` with `CRON_SECRET` returns 200
 - `POST /api/agents/social/trigger` with `CRON_SECRET` returns 200
-- `POST /api/agents/trends/cron` with `CRON_SECRET` returns 200
+- `GET /api/agents/trends/cron` with `CRON_SECRET` returns 200
 - `GET /api/agents/newsletter/cron` with `CRON_SECRET` returns 200
 - `GET /api/agents/competitors/cron` with `CRON_SECRET` returns 200
 
-## 6) Security notes
+## 7) Security notes
 
 - Rotate any token that was ever pasted into terminal history or logs.
 - Keep `CRON_SECRET` and `RAILWAY_TRIGGER_SECRET` different values.

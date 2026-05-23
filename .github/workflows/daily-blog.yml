@@ -3,9 +3,6 @@ name: Daily Blog Post
 on:
   # Allow manual trigger from GitHub Actions UI
   workflow_dispatch:
-  schedule:
-    - cron: "5 8 * * *"
-
 concurrency:
   group: daily-blog-${{ github.ref }}
   cancel-in-progress: true
@@ -29,7 +26,7 @@ jobs:
         with:
           node-version: "20"
 
-      # The generator script uses only Node 20 built-in fetch — no npm install needed.
+      # The generator script uses only Node 20 built-in fetch - no npm install needed.
       # We still install deps so Next.js path aliases (@/) resolve if ever needed.
       - name: Install project dependencies
         run: npm ci
@@ -68,7 +65,7 @@ jobs:
           fi
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           PAYLOAD=$(jq -n \
-            --arg title "⚠️ WARNING: Daily Blog Post Failed" \
+            --arg title "WARNING: Daily Blog Post Failed" \
             --arg workflow "${{ github.workflow }}" \
             --arg branch "${{ github.ref_name }}" \
             --arg run_url "$RUN_URL" \
@@ -76,7 +73,7 @@ jobs:
             '{ blocks: [
               {type:"header",text:{type:"plain_text",text:$title,emoji:true}},
               {type:"section",fields:[
-                {type:"mrkdwn",text:("*Severity:* ⚠️ Warning")},
+                {type:"mrkdwn",text:("*Severity:* Warning")},
                 {type:"mrkdwn",text:("*Workflow:* " + $workflow)},
                 {type:"mrkdwn",text:("*Branch:* `" + $branch + "`")},
                 {type:"mrkdwn",text:("*Time:* " + $ts)}

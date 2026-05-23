@@ -2,10 +2,6 @@ name: Daily Ops Summary
 
 on:
   workflow_dispatch:
-  schedule:
-    # Runs at 10:30 UTC daily — after blog (08:05) and social (09:20)
-    - cron: "30 10 * * *"
-
 concurrency:
   group: daily-ops-summary-${{ github.ref }}
   cancel-in-progress: true
@@ -24,10 +20,17 @@ jobs:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           TARGET_URL="${SITE_URL%/}"
+          if [ -z "$TARGET_URL" ]; then
+            TARGET_URL="https://www.ghostai.solutions"
+          fi
           if [ "$TARGET_URL" = "https://ghostai.solutions" ]; then
             TARGET_URL="https://www.ghostai.solutions"
           fi
 
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::CRON_SECRET is not configured for this workflow"
+            exit 1
+          fi
           RESPONSE=$(curl -sSL --retry 3 --retry-delay 2 --retry-all-errors --connect-timeout 15 --max-time 60 -o /tmp/response.json -w "%{http_code}" \
             -X POST \
             -H "Authorization: Bearer $CRON_SECRET" \
@@ -53,7 +56,7 @@ jobs:
           fi
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           PAYLOAD=$(jq -n \
-            --arg title "⚠️ WARNING: Daily Ops Summary Failed" \
+            --arg title "WARNING: Daily Ops Summary Failed" \
             --arg workflow "${{ github.workflow }}" \
             --arg branch "${{ github.ref_name }}" \
             --arg run_url "$RUN_URL" \
@@ -61,7 +64,7 @@ jobs:
             '{ blocks: [
               {type:"header",text:{type:"plain_text",text:$title,emoji:true}},
               {type:"section",fields:[
-                {type:"mrkdwn",text:("*Severity:* ⚠️ Warning")},
+                {type:"mrkdwn",text:("*Severity:* Warning")},
                 {type:"mrkdwn",text:("*Workflow:* " + $workflow)},
                 {type:"mrkdwn",text:("*Branch:* `" + $branch + "`")},
                 {type:"mrkdwn",text:("*Time:* " + $ts)}

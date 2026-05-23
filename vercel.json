@@ -1,1 +1,36 @@
-{}
+{
+  "crons": [
+    {
+      "path": "/api/agents/trends/cron",
+      "schedule": "15 7,14 * * *"
+    },
+    {
+      "path": "/api/agents/content/trigger",
+      "schedule": "5 8 * * *"
+    },
+    {
+      "path": "/api/agents/social/token-health",
+      "schedule": "50 8 * * *"
+    },
+    {
+      "path": "/api/agents/social/trigger",
+      "schedule": "20 9 * * *"
+    },
+    {
+      "path": "/api/agents/reports/daily-digest",
+      "schedule": "30 10 * * *"
+    },
+    {
+      "path": "/api/agents/newsletter/cron",
+      "schedule": "0 13 * * 2"
+    },
+    {
+      "path": "/api/agents/competitors/cron",
+      "schedule": "20 13 * * 4"
+    },
+    {
+      "path": "/api/agents/reports/monthly",
+      "schedule": "10 14 1 * *"
+    }
+  ]
+}

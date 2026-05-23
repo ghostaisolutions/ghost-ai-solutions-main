@@ -2,9 +2,6 @@ name: Newsletter Weekly Send
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 13 * * 2"
-
 concurrency:
   group: newsletter-weekly-${{ github.ref }}
   cancel-in-progress: true
@@ -21,8 +18,15 @@ jobs:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           TARGET_URL="${SITE_URL%/}"
+          if [ -z "$TARGET_URL" ]; then
+            TARGET_URL="https://www.ghostai.solutions"
+          fi
           if [ "$TARGET_URL" = "https://ghostai.solutions" ]; then
             TARGET_URL="https://www.ghostai.solutions"
+          fi
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::CRON_SECRET is not configured for this workflow"
+            exit 1
           fi
           response=$(curl -sSL --retry 3 --retry-delay 2 --retry-all-errors --connect-timeout 15 --max-time 120 -o /tmp/response.json -w "%{http_code}" \
             -H "Authorization: Bearer $CRON_SECRET" \
@@ -45,7 +49,7 @@ jobs:
           fi
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           PAYLOAD=$(jq -n \
-            --arg title "⚠️ WARNING: Newsletter Weekly Send Failed" \
+            --arg title "WARNING: Newsletter Weekly Send Failed" \
             --arg workflow "${{ github.workflow }}" \
             --arg branch "${{ github.ref_name }}" \
             --arg run_url "$RUN_URL" \
@@ -53,7 +57,7 @@ jobs:
             '{ blocks: [
               {type:"header",text:{type:"plain_text",text:$title,emoji:true}},
               {type:"section",fields:[
-                {type:"mrkdwn",text:("*Severity:* ⚠️ Warning")},
+                {type:"mrkdwn",text:("*Severity:* Warning")},
                 {type:"mrkdwn",text:("*Workflow:* " + $workflow)},
                 {type:"mrkdwn",text:("*Branch:* `" + $branch + "`")},
                 {type:"mrkdwn",text:("*Time:* " + $ts)}

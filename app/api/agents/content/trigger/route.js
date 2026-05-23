@@ -3,6 +3,7 @@ import { getGitHubRepositoryAccess } from "@/lib/githubAppAuth";
 import { repurposeBlogPost } from "@/lib/socialRepurpose";
 import { createSocialDraft } from "@/lib/socialDraftStore";
 import { publishVariants } from "@/lib/socialPublish";
+import { markSlugsPublished } from "@/lib/publishedSlugsStore";
 
 export const maxDuration = 60;
 
@@ -388,6 +389,7 @@ async function run(request) {
     await createAutoPostFile(cfg, githubAccess.token, slug, JSON.stringify(output, null, 2));
 
     const social = await moderateAndPublish(output);
+    await markSlugsPublished([slug]).catch(() => null);
 
     return NextResponse.json({
       success: true,

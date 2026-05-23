@@ -2,10 +2,6 @@ name: Social Token Health Check
 
 on:
   workflow_dispatch:
-  schedule:
-    # Runs at 08:50 UTC daily — 30 min before social publishing (09:20)
-    - cron: "50 8 * * *"
-
 concurrency:
   group: social-token-health-${{ github.ref }}
   cancel-in-progress: true
@@ -24,10 +20,17 @@ jobs:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           TARGET_URL="${SITE_URL%/}"
+          if [ -z "$TARGET_URL" ]; then
+            TARGET_URL="https://www.ghostai.solutions"
+          fi
           if [ "$TARGET_URL" = "https://ghostai.solutions" ]; then
             TARGET_URL="https://www.ghostai.solutions"
           fi
 
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::CRON_SECRET is not configured for this workflow"
+            exit 1
+          fi
           RESPONSE=$(curl -sSL --retry 3 --retry-delay 2 --retry-all-errors --connect-timeout 15 --max-time 60 -o /tmp/response.json -w "%{http_code}" \
             -X POST \
             -H "Authorization: Bearer $CRON_SECRET" \
@@ -44,7 +47,7 @@ jobs:
 
           HEALTHY=$(node -e "const d=require('/tmp/response.json'); process.exit(d.healthy ? 0 : 1)" 2>/dev/null && echo "true" || echo "false")
           echo "All tokens healthy: $HEALTHY"
-          # Don't fail the job on unhealthy tokens — Slack alert handles it
+          # Don't fail the job on unhealthy tokens - Slack alert handles it
 
       - name: Notify Slack on job failure
         if: failure()
@@ -54,7 +57,7 @@ jobs:
           if [ -z "$SLACK_WEBHOOK_URL" ]; then exit 0; fi
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           PAYLOAD=$(jq -n \
-            --arg title "⚠️ WARNING: Social Token Health Check Failed" \
+            --arg title "WARNING: Social Token Health Check Failed" \
             --arg workflow "${{ github.workflow }}" \
             --arg branch "${{ github.ref_name }}" \
             --arg run_url "$RUN_URL" \
@@ -62,7 +65,7 @@ jobs:
             '{ blocks: [
               {type:"header",text:{type:"plain_text",text:$title,emoji:true}},
               {type:"section",fields:[
-                {type:"mrkdwn",text:("*Severity:* ⚠️ Warning")},
+                {type:"mrkdwn",text:("*Severity:* Warning")},
                 {type:"mrkdwn",text:("*Workflow:* " + $workflow)},
                 {type:"mrkdwn",text:("*Branch:* `" + $branch + "`")},
                 {type:"mrkdwn",text:("*Time:* " + $ts)}

@@ -21,14 +21,20 @@ async function checkLinkedIn() {
 }
 
 async function checkTwitter() {
-  const apiKey = process.env.X_API_KEY;
-  const apiSecret = process.env.X_API_SECRET;
+  const apiKey = process.env.X_CONSUMER_KEY || process.env.X_API_KEY;
+  const apiSecret = process.env.X_CONSUMER_SECRET || process.env.X_API_SECRET;
   const accessToken = process.env.X_ACCESS_TOKEN;
-  const accessSecret = process.env.X_ACCESS_TOKEN_SECRET;
+  const accessSecret = process.env.X_ACCESS_SECRET || process.env.X_ACCESS_TOKEN_SECRET;
 
   if (!apiKey || !apiSecret || !accessToken || !accessSecret) {
-    const missing = ["X_API_KEY", "X_API_SECRET", "X_ACCESS_TOKEN", "X_ACCESS_TOKEN_SECRET"]
-      .filter((k) => !process.env[k])
+    const missing = [
+      ["X_CONSUMER_KEY", "X_API_KEY"],
+      ["X_CONSUMER_SECRET", "X_API_SECRET"],
+      ["X_ACCESS_TOKEN"],
+      ["X_ACCESS_SECRET", "X_ACCESS_TOKEN_SECRET"],
+    ]
+      .filter((group) => !group.some((k) => process.env[k]))
+      .map((group) => group.join(" or "))
       .join(", ");
     return { platform: "x", status: "missing", detail: `Missing: ${missing}` };
   }
